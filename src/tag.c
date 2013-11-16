@@ -1,0 +1,157 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
+
+struct format {
+	int offset;
+	void (*format)(int offset);
+	struct format *next;
+};
+
+static char stamp[1024];
+static int stamp_len = 0;
+static struct format *fmt = NULL;
+
+static int line_count = 0;
+
+void
+format_line_count (int offset) {
+	char last = stamp[offset+5];
+	sprintf(stamp+offset, "%05d", line_count++);
+	stamp[offset+5] = last;
+}
+
+void
+format_date (int offset) {
+	time_t ltime;
+	struct tm *tm;
+
+	time(&ltime);
+	tm = localtime(&ltime);
+
+	char last = stamp[offset+19];
+	sprintf(stamp+offset, "%04d-%02d-%02d %02d:%02d:%02d",
+		tm->tm_year+1900,
+		tm->tm_mon+1,
+		tm->tm_mday,
+		tm->tm_hour,
+		tm->tm_min,
+		tm->tm_sec
+	);
+	stamp[offset+19] = last;
+}
+
+void
+apply_format () {
+	struct format *next = fmt;
+	while (next != NULL) {
+		next->format(next->offset);
+		next = next->next;
+	}
+}
+
+int
+compile_format (int len, char format[]) {
+	bool formatting = false;
+	struct format *next = fmt;
+
+	for (int i = 0; i < len; i++) {
+		char ch = format[i];
+
+		if (ch == '%') {
+			formatting = true;
+			continue;
+		}
+		if (!formatting) {
+			stamp[stamp_len++] = ch;
+			continue;
+		}
+
+		formatting = false;
+
+		if (ch == 'h') {
+			char hostname[1024];
+			gethostname(hostname, 1024);
+			for (int j = 0; hostname[j] != '\0'; j++) stamp[stamp_len++] = hostname[j];
+			continue;
+		}
+
+		if (next) next = next->next = malloc(sizeof(struct format));
+		else fmt = next = malloc(sizeof(struct format));
+
+		next->offset = stamp_len;
+		next->next = NULL;
+
+		if (ch == 'd') {
+			next->format = format_date;
+			stamp_len += 19;
+			continue;
+		}
+		if (ch == 'l') {
+			next->format = format_line_count;
+			stamp_len += 5;
+			continue;
+		}
+
+		return -1;
+	}
+
+	stamp[stamp_len++] = ' ';
+	stamp[stamp_len++] = '\0';
+	return 0;
+}
+
+int
+main(int argc, char *argv[]) {
+	if (argc < 2) {
+		printf(
+			"\n"
+			"  Usage: tag [tags]\n"
+			"  - tag all lines piped to stdin with a message\n"
+			"\n"
+			"  Examples:\n"
+			"    tag hello-world  # -> hello-world\n"
+			"    tag %%h [%%d]      # -> hostname [YYYY-MM-DD HH:mm:ss] [error]\n"
+			"    tag %%l test      # -> line-number test\n"
+			"\n"
+		);
+		exit(1);
+	}
+
+	for (int i = 1; i < argc; i++) {
+		if (compile_format(strlen(argv[i]), argv[i]) < 0) {
+			char msg[] = "invalid format\n";
+			write(2, msg, strlen(msg));
+			exit(2);
+		}
+	}
+
+	char prev = '\n';
+	char buf[1024];
+	int len;
+
+	while ((len = read(0, &buf, 1024)) > 0) {
+		int offset = 0;
+
+		for (int i = 0; i < len; i++) {
+			if (prev == '\n') {
+				apply_format();
+				write(1, stamp, stamp_len);
+			}
+			if (buf[i] == '\n') {
+				write(1, buf+offset, i-offset+1);
+				offset = i+1;
+			}
+			prev = buf[i];
+		}
+
+		if (offset < len) {
+			write(1, buf+offset, len-offset);
+		}
+	}
+
+	return 0;
+}
