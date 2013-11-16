@@ -104,10 +104,16 @@ compile_format (int len, char format[]) {
 	return 0;
 }
 
+void
+error(char *msg) {
+	write(2, msg, strlen(msg));
+	exit(1);
+}
+
 int
 main(int argc, char *argv[]) {
 	if (argc < 2) {
-		printf(
+		error(
 			"\n"
 			"  Usage: tag [tags]\n"
 			"  - tag all lines piped to stdin with a message\n"
@@ -118,15 +124,10 @@ main(int argc, char *argv[]) {
 			"    tag %%l test      # -> line-number test\n"
 			"\n"
 		);
-		exit(1);
 	}
 
 	for (int i = 1; i < argc; i++) {
-		if (compile_format(strlen(argv[i]), argv[i]) < 0) {
-			char msg[] = "invalid format\n";
-			write(2, msg, strlen(msg));
-			exit(2);
-		}
+		if (compile_format(strlen(argv[i]), argv[i]) < 0) error("Invalid format\n");
 	}
 
 	char prev = '\n';
@@ -139,17 +140,17 @@ main(int argc, char *argv[]) {
 		for (int i = 0; i < len; i++) {
 			if (prev == '\n') {
 				apply_format();
-				write(1, stamp, stamp_len);
+				if (write(1, stamp, stamp_len) < 0) exit(1);
 			}
 			if (buf[i] == '\n') {
-				write(1, buf+offset, i-offset+1);
+				if (write(1, buf+offset, i-offset+1) < 0) exit(1);
 				offset = i+1;
 			}
 			prev = buf[i];
 		}
 
 		if (offset < len) {
-			write(1, buf+offset, len-offset);
+			if (write(1, buf+offset, len-offset) < 0) exit(1);
 		}
 	}
 
