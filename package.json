@@ -1,6 +1,6 @@
 {
   "name": "tag",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "repo": "mafintosh/tag",
   "description": "tag streams of data",
   "keywords": ["tag", "stream"],
