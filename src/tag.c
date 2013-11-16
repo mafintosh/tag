@@ -120,7 +120,7 @@ main(int argc, char *argv[]) {
 			"\n"
 			"  Examples:\n"
 			"    tag hello-world  # -> hello-world\n"
-			"    tag %h [%d]      # -> hostname [YYYY-MM-DD HH:mm:ss] [error]\n"
+			"    tag %h [%d]      # -> hostname [YYYY-MM-DD HH:mm:ss]\n"
 			"    tag %l test      # -> line-number test\n"
 			"\n"
 		);
