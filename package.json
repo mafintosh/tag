@@ -1,0 +1,9 @@
+{
+  "name": "tag",
+  "version": "0.1.0",
+  "repo": "mafintosh/tag",
+  "description": "tag streams of data",
+  "keywords": ["tag", "stream"],
+  "license": "MIT",
+  "install": "make install"
+}
