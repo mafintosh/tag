@@ -22,7 +22,7 @@ Either clone the repo and do
 
 Or install via clib
 
-	clib install mafintosh/tag.c
+	clib install mafintosh/tag
 
 ## License
 
