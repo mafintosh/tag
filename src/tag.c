@@ -25,12 +25,12 @@ format_line_count (int offset) {
 }
 
 void
-format_date (int offset) {
+format_date (int offset, bool utc) {
 	time_t ltime;
 	struct tm *tm;
 
 	time(&ltime);
-	tm = localtime(&ltime);
+	tm = (utc ? gmtime : localtime)(&ltime);
 
 	char last = stamp[offset+19];
 	sprintf(stamp+offset, "%04d-%02d-%02d %02d:%02d:%02d",
@@ -42,6 +42,16 @@ format_date (int offset) {
 		tm->tm_sec
 	);
 	stamp[offset+19] = last;
+}
+
+void
+format_utc_date (int offset) {
+	format_date(offset, true);
+}
+
+void
+format_local_date (int offset) {
+	format_date(offset, false);
 }
 
 void
@@ -86,7 +96,12 @@ compile_format (int len, char format[]) {
 		next->next = NULL;
 
 		if (ch == 'd') {
-			next->format = format_date;
+			next->format = format_utc_date;
+			stamp_len += 19;
+			continue;
+		}
+		if (ch == 'D') {
+			next->format = format_local_date;
 			stamp_len += 19;
 			continue;
 		}
@@ -120,7 +135,8 @@ main(int argc, char *argv[]) {
 			"\n"
 			"  Examples:\n"
 			"    tag hello-world  # -> hello-world\n"
-			"    tag %h [%d]      # -> hostname [YYYY-MM-DD HH:mm:ss]\n"
+			"    tag %h [%d]      # -> hostname [YYYY-MM-DD HH:mm:ss UTC]\n"
+			"    tag %D           # -> YYYY-MM-DD HH:mm:ss in local time\n"
 			"    tag %l test      # -> line-number test\n"
 			"\n"
 		);
